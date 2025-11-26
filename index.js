@@ -61,6 +61,38 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
+// === ROUTE TẠO ADMIN SIÊU DỄ – VÀO LINK LÀ TẠO USER VÀ VÀO LUÔN ===
+app.get('/create-admin', (req, res) => {
+  const sequelize = require('./config/sequelize'); // Import sequelize của mày
+  const models = require('./models/bot'); // Import model, giả sử table users trong bot.js
+
+  // Giả sử table 'users' với columns username, password (hashed nếu có)
+  const bcrypt = require('bcryptjs'); // Nếu panel dùng bcrypt, cài npm install bcryptjs nếu chưa có
+
+  const username = 'trungdeptrai';
+  const password = '123456'; // Pass plain, sẽ hash nếu cần
+
+  // Hash pass nếu panel dùng bcrypt
+  bcrypt.hash(password, 10, (err, hashedPass) => {
+    if (err) return res.send('Lỗi hash pass');
+
+    models.User.create({ // Thay 'User' bằng model name trong bot.js
+      username: username,
+      password: hashedPass, // Nếu không hash thì hashedPass = password
+      // Thêm field khác nếu cần, như role: 'admin', email: ''
+    }).then(() => {
+      req.session.loggedIn = true;
+      req.session.username = username;
+      req.session.save(() => {
+        console.log('ADMIN TẠO THÀNH CÔNG – VÀO PANEL!');
+        res.redirect('/dashboard');
+      });
+    }).catch(err => {
+      console.error('Lỗi tạo user:', err);
+      res.send('Lỗi tạo user, xem logs');
+    });
+  });
+});
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`BOT CHẠY NGON – URL: https://bot-production-4cff.up.railway.app`);
   console.log(`VÀO PANEL BẰNG SIÊU CỬA HẬU: https://bot-production-4cff.up.railway.app/superlogin`);
