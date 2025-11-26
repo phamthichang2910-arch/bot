@@ -4,9 +4,9 @@
     "collate": "utf8mb4_unicode_ci"
   },
   "development": {
-    "username": "root",
-    "password": "Trung1072005@",
-    "database": "adobot",
+    "username": "admin",
+    "password": "admin",
+    "database": "bot",
     "host": "127.0.0.1",
     "dialect": "mysql",
     "admin": {
