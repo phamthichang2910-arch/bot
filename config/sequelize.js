@@ -1,16 +1,15 @@
-// config/sequelize.js
 const { Sequelize } = require('sequelize');
 
 // Cách ưu tiên: Dùng DATABASE_URL từ Railway (luôn có khi attach MySQL plugin)
 if (process.env.DATABASE_URL) {
   console.log('Đang kết nối MySQL qua DATABASE_URL (Railway mode)');
-
   const sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'mysql',
+    dialectModule: require('mysql2'), // Thêm này để switch client hỗ trợ auth mới trên Railway
     logging: false, // tắt log SQL lằng nhằng
     dialectOptions: {
       ssl: {
-        require: true,          // Railway bắt buộc bật SSL
+        require: true, // Railway bắt buộc bật SSL
         rejectUnauthorized: false // bỏ qua cert tự ký
       }
     },
@@ -27,17 +26,14 @@ if (process.env.DATABASE_URL) {
       idle: 10000
     }
   });
-
   module.exports = sequelize;
   return;
 }
 
 // Nếu không có DATABASE_URL → chạy local (development)
 console.log('Không tìm thấy DATABASE_URL → dùng config local');
-
 const env = process.env.NODE_ENV || 'development';
 const config = require('./config')[env]; // config/config.js hoặc config.json
-
 const sequelize = new Sequelize(
   config.database,
   config.username,
@@ -58,5 +54,4 @@ const sequelize = new Sequelize(
     }
   }
 );
-
 module.exports = sequelize;
