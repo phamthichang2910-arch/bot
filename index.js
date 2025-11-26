@@ -7,6 +7,7 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server, { pingTimeout: 60000, pingInterval: 25000, cors: { origin: "*", methods: ["GET", "POST"] } });
 
 const sequelize = require('./config/sequelize'); // Import sequelize để dùng store và sync
+// NOTE: Trong ./config/sequelize.js, thêm dialectModule: require('mysql2') nếu dùng cách 2
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
