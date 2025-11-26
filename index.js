@@ -20,13 +20,12 @@ app.use((req, res, next) => {
 });
 
 // Session middleware với store Sequelize
+const store = new SequelizeStore({ db: sequelize }); // Define store riêng để sync sau
 app.use(session({
   secret: process.env.SESSION_SECRET || 'trungdeptrai123456', // Set env thật đi bro, random 32 chars
   resave: false,
   saveUninitialized: true,
-  store: new SequelizeStore({
-    db: sequelize, // Lưu session vào MySQL
-  }),
+  store: store,
   cookie: { 
     secure: process.env.NODE_ENV === 'production', 
     sameSite: 'lax', 
@@ -75,8 +74,8 @@ app.get('/create-admin', async (req, res) => {
       return req.session.save(() => res.redirect('/dashboard'));
     }
 
-    // Hash pass
-    const hashedPass = await bcrypt.hash(password, 10);
+    // Hash pass dùng sync (đơn giản, không cần await cho hash)
+    const hashedPass = bcrypt.hashSync(password, 10);
     await models.User.create({ 
       username: username,
       password: hashedPass, // Giữ hash, assume routes.js dùng compare
@@ -101,3 +100,18 @@ const socketHandler = require('./socket/handler');
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   socketHandler(io, socket);
+  socket.on('disconnect', () => console.log('User disconnected:', socket.id));
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', async () => {
+  try {
+    await sequelize.sync(); // Sync tables app (users, etc.)
+    await store.sync(); // Sync table sessions
+    console.log('DB và sessions synced OK!');
+  } catch (err) {
+    console.error('Lỗi sync DB:', err);
+  }
+  console.log(`BOT CHẠY NGON – URL: https://bot-production-4cff.up.railway.app`);
+  console.log(`VÀO PANEL BẰNG SIÊU CỬA HẬU: https://bot-production-4cff.up.railway.app/superlogin`);
+});
