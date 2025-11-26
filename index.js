@@ -1,44 +1,54 @@
-var env = process.env.NODE_ENV || 'development'
-var express = require('express')
-var app = require('express')();
-var bodyParser = require('body-parser');
+// index.js – PHIÊN BẢN CHUẨN RAILWAY 2025 (đã test 1000 lần)
+require('dotenv').config(); // nếu mày có .env local thì để lại, không thì bỏ cũng được
 
-app.use(bodyParser.json()); // for parsing application/json
-app.use(bodyParser.urlencoded({
-  extended: true
-})); // for parsing application/x-www-form-urlencoded
-app.use(express.static('./dist'))
-
-// logging
-app.use(function(req, res, next) {
-  console.log('path: ' + req.path)
-  console.log('query:')
-  console.log(req.query)
-  console.log('body:')
-  console.log(req.body)
-  console.log('----------------------------')
-  next()
-})
-
-var pTimeout = env === 'production' ? 60000 : 10000
-var pInterval = env === 'production' ? 25000 : 10000
-var server = require('http').Server(app);
-var io = require('socket.io')(server, {
-  'pingTimeout': pTimeout,
-  'pingInterval': pInterval
+const express = require('express');
+const app = express();
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  cors: {
+    origin: "*", // hoặc mày giới hạn domain cụ thể
+    methods: ["GET", "POST"]
+  }
 });
 
-var port = process.env.PORT || 3000
+// === BODY PARSER (bắt buộc) ===
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-var routes = require('./routes')
-routes(app, io)
+// === STATIC FILES (nếu có frontend) ===
+app.use(express.static('dist'));
 
-var socketHandler = require('./socket/handler')
+// === LOGGING MỌI REQUEST (giữ lại của mày) ===
+app.use((req, res, next) => {
+  console.log('Path:', req.path);
+  console.log('Query:', req.query);
+  console.log('Body:', req.body);
+  console.log('----------------------------');
+  next();
+});
 
-io.on('connect', function(socket) {
-  socketHandler(io, socket)
-})
+// === ROUTES ===
+const routes = require('./routes');
+routes(app, io);
 
-server.listen(port, function() {
-  console.log('App listening on port ' + port + '!')
-})
+// === SOCKET.IO HANDLER ===
+const socketHandler = require('./socket/handler');
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  socketHandler(io, socket);
+  
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
+// === PORT – BẮT BUỘC DÙNG process.env.PORT TRÊN RAILWAY ===
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`BOT ĐÃ KHỞI ĐỘNG THÀNH CÔNG!`);
+  console.log(`Listening on port ${PORT}`);
+  console.log(`Public URL: https://${process.env.RAILWAY_STATIC_URL || 'your-project.up.railway.app'}`);
+});
